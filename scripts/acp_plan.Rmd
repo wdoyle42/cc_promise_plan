@@ -92,6 +92,10 @@ cc_inst%>%
 ```
 
 ## What will this do to tuition+state+local approps if implemented? 
+
+States give up tuition revenue for community college students;
+states get median tuition for each fte,
+states must increase spending by 20% of the total sum spent in state. 
 ```{r}
 cc_inst%>%
   mutate(eg_revs=tuition_revs+
