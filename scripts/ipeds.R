@@ -1,10 +1,10 @@
 ################################################################################
 ##
-## <PROJ> National Afforability Report: 50 States
+## <PROJ> America's College Promise
 ## <FILE> ipeds.r
 ## <AUTH> Will Doyle and Benjamin Skinner
-## <INIT> 2015-05-27
-## <REV> 2021-04-08
+## <INIT> 2021-09-09
+##
 ################################################################################
 
 ## PURPOSE
@@ -22,8 +22,8 @@
 
 ## https://gist.github.com/btskinner/f42c87507169d0ba773c
 
-##Libraries 
-library(tidyverse) 
+##Libraries
+library(tidyverse)
 library(noncensus)
 library(here)
 
@@ -33,7 +33,7 @@ source('functions.r')
 rddir<-"../data/raw/"
 addir<-"../data/cleaned/"
 ## =============================================================================
-## BUILD DATASETS 
+## BUILD DATASETS
 ## =============================================================================
 
 years<-2019
@@ -41,8 +41,14 @@ years<-2019
 ## IPEDS institutional characteristics (using HD files)
 
 filenames<-paste0('HD',2019,'.zip')
-var <- c('unitid','instnm','city','stabbr','control','sector','carnegie', 'c18ipug','c15basic','obereg','latitude','longitud','city','addr','zip')
+var <- c('unitid','instnm','city','stabbr','control','sector','tribal' ,'carnegie', 'c18ipug','c15basic','obereg','hloffer','latitude','longitud','city','addr','zip')
 hd_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=years)
+
+## Student Charges IC2019_AY
+filenames<-paste0("IC",2019,'_AY',".zip")
+var<-c('unitid','tuition2')
+ic_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=years)
+
 
 ## IPEDS enrollments (using EFIA files)
 
@@ -50,6 +56,14 @@ filenames <-paste0('EFIA',2019,'.zip')
 var <- c('unitid','fteug')
 efia_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=2019)
 
+## Finance
+
+filenames<-"F1819_F1A.zip"
+
+var<-c('unitid',"f1b01","f1b02","f1b03","f1b04a", "f1b11","f1b12")
+var<-tolower(var)
+
+finance_df<- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=2019)
 
 ## Degrees awarded
 filenames<-'C2019_C.zip'
@@ -68,7 +82,7 @@ names(comp_df)[3:9]<-c("Bachelors",
                        "Cert<1")
 comp_df<-comp_df%>%
   mutate_all(replace_na,0)
-  
+
 # ## AWlevel codes
 #   3	Associate's degree
 # 5	Bachelor's degree
@@ -77,15 +91,24 @@ comp_df<-comp_df%>%
 # 10	Postbaccalaureate or Post-master's certificate
 # 1	Award of less than 1 academic year
 # 2	Award of at least 1 but less than 4 academic years
-  
+
 ## =============================================================================
 ## MERGE DATASETS
 ## =============================================================================
 
 inst<-
   hd_df%>%
+  left_join(ic_df)%>%
   left_join(efia_df)%>%
-  left_join(comp_df)
+  left_join(finance_df)%>%
+  left_join(comp_df)%>%
+  rename(tuition_revs=f1b01,
+         fed_grants=f1b02,
+         state_grants=f1b03,
+         local_grants=f1b04a,
+         state_approps=f1b11,
+         local_approps=f1b12)%>%
+  as_tibble()
 
 ## =============================================================================
 ## Add full state names
@@ -104,10 +127,10 @@ inst<-inst%>%left_join(states,by="stabbr")
 
 inst<-inst%>%
   filter(fteug>0,   ##Drop if no undergrads
-         sector!=0,  ## drop admin units 
+         sector!=0,  ## drop admin units
          obereg!=0, ## drop military academies
          unitid != 100636 ) ## drop cc of the airforce
-  
+
 
 ##Drop rownames
 rownames(inst) <- NULL
@@ -117,6 +140,11 @@ rownames(inst) <- NULL
 inst<-inst%>%
   filter(!(is.na(region)))
 
+inst<-inst%>%mutate(tuition2=as.numeric(tuition2))
+
+## Drop tirbal colleges
+
+inst<-inst%>%filter(tribal==2)
 
 ## =============================================================================
 ## OUTPUT FINAL DATASET AS .CSV
@@ -124,15 +152,3 @@ inst<-inst%>%
 
 
 write_csv(inst, file = paste0(addir, 'institutions.csv'))
-
-library(haven)
-
-inst_tn<-filter(inst,stabbr=="TN")%>%select(-`Cert> 1`,-`Cert<1`)
-  
-
-write_dta(inst_tn,"~/lpo_prac/lessons/s3-09-spatial/inst.dta")
-
-## =============================================================================
-## END
-################################################################################
-

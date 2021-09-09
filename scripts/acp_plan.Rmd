@@ -1,0 +1,115 @@
+---
+title: "America's College Promise Plan"
+author: "Will Doyle"
+date: "9/9/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+addir<-"../data/cleaned/"
+```
+
+
+```{r}
+inst<-read_csv(paste0(addir,"institutions.csv"))
+```
+
+# Defining Community Colleges
+
+‘‘(2) COMMUNITY COLLEGE.—The term ‘community college’ means—
+ a degree-granting public institution of
+ higher education at which—
+ the highest degree awarded is an
+ associate degree; or
+an associate degree is the predominant degree awarded; 
+
+
+
+```{r}
+cc_inst<-inst%>%
+  rowwise()%>%
+  mutate(most_degrees=max(Bachelors, ## Select the largest from this list
+                          Masters, 
+                          PhD,
+                          Associates))%>%
+  mutate(predom_assoc=ifelse(most_degrees==Associates,1,0))%>% ## If the larges is associates then the inst is predom associ
+  mutate(promise_elig=ifelse(predom_assoc==1|hloffer==3,1,0 ))%>% ## OR highest offer is associates
+  filter(control==1)%>% ## public only
+  filter(promise_elig==1) ## eigible only
+         
+
+```
+
+This leaves 943 institutions eligible for the plan. 
+
+## Median Tuition across the states
+"The median resident community college tuition and fees per student in all States, not weighted for enrollment, for the most recent award year for which data are available; "
+
+Given that this says all states I'm going to assume that they mean 
+the median of all average state tuitions. It looks like that's CT, with an average in state CC tuition of \$3,984. 
+```{r}
+cc_inst%>%
+  group_by(name)%>%
+  summarize(mean_tuition=mean(tuition2,na.rm=TRUE))%>%
+  arrange(-mean_tuition)%>%
+  print(n=50)
+```
+
+```{r}
+cc_inst<-cc_inst%>%
+  group_by(name)%>%
+  mutate(mean_tuition=mean(tuition2,na.rm=TRUE))%>%
+  ungroup()%>%
+  mutate(median_tuition=median(mean_tuition,na.rm = TRUE))
+```
+
+## How much will states get? 
+```{r}
+cc_inst<-cc_inst%>%
+  mutate(fed_spend=median_tuition*fteug)
+
+```
+
+```{r}
+cc_inst%>%
+  group_by(name)%>%
+  summarize(fed_spending=sum(fed_spend))%>%
+  mutate(name=fct_reorder(name,fed_spending))%>%
+  ggplot(aes(x=name,y=fed_spending))+
+  geom_col()+
+  coord_flip()
+```
+
+
+## How much will states have to pay?
+
+```{r}
+
+```
+
+## What will this do to tuition+state+local approps if implemented? 
+```{r}
+cc_inst%>%
+  mutate(eg_revs=tuition_revs+
+           state_approps+
+           local_approps)%>%
+  mutate(state_local_revs=state_approps+local_approps)%>%
+  mutate(new_eg_revs=state_approps+local_approps+fed_spend+(.2*fed_spend))%>%
+  group_by(name)%>%
+  summarize(total_revs=sum(eg_revs,na.rm=TRUE),
+            total_new_revs=sum(new_eg_revs,na.rm=TRUE),
+            total_state_local=sum(state_local_revs,na.rm = TRUE),
+            total_fte=sum(fteug))%>%
+  mutate(eg_revs_fte=total_revs/total_fte)%>%
+  mutate(state_local_fte=total_state_local/total_fte)%>%
+  mutate(new_eg_revs_fte=total_new_revs/total_fte)%>%
+  mutate(diff=new_eg_revs_fte-eg_revs_fte)%>%
+  arrange(-diff)%>%View()
+
+
+```
+
