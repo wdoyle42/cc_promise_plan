@@ -36,39 +36,39 @@ addir<-"../data/cleaned/"
 ## BUILD DATASETS
 ## =============================================================================
 
-years<-2019
+year<-2019
 
 ## IPEDS institutional characteristics (using HD files)
 
-filenames<-paste0('HD',2019,'.zip')
+filenames<-paste0('HD',year,'.zip')
 var <- c('unitid','instnm','city','stabbr','control','sector','tribal' ,'carnegie', 'c18ipug','c15basic','obereg','hloffer','latitude','longitud','city','addr','zip')
-hd_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=years)
+hd_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=year)
 
 ## Student Charges IC2019_AY
-filenames<-paste0("IC",2019,'_AY',".zip")
+filenames<-paste0("IC",year,'_AY',".zip")
 var<-c('unitid','tuition2')
-ic_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=years)
+ic_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=year)
 
 
 ## IPEDS enrollments (using EFIA files)
 
-filenames <-paste0('EFIA',2019,'.zip')
+filenames <-paste0('EFIA',year,'.zip')
 var <- c('unitid','fteug')
-efia_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=2019)
+efia_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=year)
 
 ## Finance
 
-filenames<-"F1819_F1A.zip"
+filenames<-"F1718_F1A.zip"
 
 var<-c('unitid',"f1b01","f1b02","f1b03","f1b04a", "f1b11","f1b12")
 var<-tolower(var)
 
-finance_df<- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=2019)
+finance_df<- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=year)
 
 ## Degrees awarded
-filenames<-'C2019_C.zip'
+filenames<-'C2018_C.zip'
 var<-c('unitid','awlevelc','cstotlt')
-comp_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=2019)
+comp_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=year)
 comp_df<-comp_df%>%
   pivot_wider(id_cols=c("unitid","year"),
               names_from = awlevelc,
@@ -146,7 +146,6 @@ inst<-inst%>%mutate(tuition2=as.numeric(tuition2))
 
 inst<-inst%>%filter(tribal==2)
 
-inst<-inst%>%filter(fteug!=0)
 
 ## =============================================================================
 ## OUTPUT FINAL DATASET AS .CSV

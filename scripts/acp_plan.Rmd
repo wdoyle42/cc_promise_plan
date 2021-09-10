@@ -90,6 +90,7 @@ cc_inst%>%
 
 ```{r}
 cc_inst<-cc_inst%>%
+  filter(stabbr!="AK")%>%
   group_by(name)%>%
   mutate(mean_tuition=mean(tuition2,na.rm=TRUE))%>%
   ungroup()%>%
@@ -107,7 +108,7 @@ cc_inst<-cc_inst%>%
 
 ```
 
-The subsidy per ALL college students wil depend crucially on the distribution of FTE enrollment by state. States with a large proportion of students in eligible institiutions will get more, states with more four year enrolment, less. 
+The subsidy per ALL college students will depend crucially on the distribution of FTE enrollment by state. States with a large proportion of students in eligible institutions will get more, states with more four year enrollment, less. 
 
 ```{r}
 cc_inst%>%
@@ -120,26 +121,25 @@ cc_inst%>%
   coord_flip()
 ```
 
+So, the big winners will be Wyoming, New Mexico and California. Vermont and New Hampshire, not so much. Some big states will get pretty low per-student subsidies, notably New York, Pennsylvania and Massachusetts. 
 
 ## What will this do to tuition+state+local approps if implemented? 
-
 
 Here's the basic formula for this plan again:
 
 - States give up tuition revenue for community college students;
-- States get median tuition for each fte,
-- States must increase spending by 20% of the total sum spent in state. 
+- States get nationwide median tuition for each fte enrolled in community college,
+- States must increase spending by 20% of the total sum spent in state (when fully phased in). 
 
 So OLD total revenues consisted of state appropriations plus local appropriations plus tuition revenues
 
-NEW totall revenues will consist of state appropriations plus local appropriations plus federal funding (~4k per student) plus state match (800 per student once fully funded). States are mandated not to decrease funding. 
+NEW total revenues will consist of state appropriations plus local appropriations plus federal funding (~4k per student) plus state match (800 per student once fully funded). States are mandated not to decrease funding. 
 ```{r}
-cc_inst%>%
+cc_totals<-cc_inst%>%
   mutate(eg_revs=tuition_revs+
            state_approps+
            local_approps)%>%
   mutate(state_local_revs=state_approps+local_approps)%>%
-
   mutate(new_eg_revs=state_approps+local_approps+fed_spend+state_match)%>%
   group_by(name)%>%
   summarize(total_revs=sum(eg_revs,na.rm=TRUE),
@@ -153,7 +153,54 @@ cc_inst%>%
   arrange(-diff)
 
 
+cc_totals_sum<-cc_totals%>%
+  select(name,eg_revs_fte,new_eg_revs_fte,diff)%>%
+  rename(State=name,"Current EG Revenues"=eg_revs_fte,"Proposed EG Revenues"=new_eg_revs_fte,Difference=diff)
+  cc_totals_sum%>%knitr::kable()
+```
 
+
+It looks like California community college students stand to gain $3,560 each, while Vermont students would see a decline in per student funding of about 5,000 unless the state steps in and makes up the difference. There are only 7 states where the federal plus state match would be lower than current tuition revenues. 
+
+Here's a plot showing old and new revenues by state:
+
+```{r}
+cc_totals%>%
+  select(name,eg_revs_fte,new_eg_revs_fte)%>%
+  mutate(name=fct_reorder(name,new_eg_revs_fte))%>%
+  rename(State=name,"Current EG Revenues"=eg_revs_fte,"Proposed EG Revenues"=new_eg_revs_fte)%>%
+  pivot_longer(cols=-State,names_to="Funding Type")%>%
+  ggplot(aes(x=State,y=value,fill=`Funding Type`))+
+  geom_bar(stat="identity",position="dodge")+
+  coord_flip()
+```
+
+
+```{r}
+spend_sum<-cc_inst%>%
+  group_by(name)%>%
+  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  mutate(new_total=state_approps+local_approps+fed_spend+state_match)%>%
+  mutate(name=fct_reorder(name,total))
+knitr::kable(spend_sum)
+```
+
+```{r}
+spend_sum%>%
+  select(name,state_approps,local_approps,fed_spend,state_match)%>%
+  rename("Federal Spending"=fed_spend,"Local Approps"=local_approps,"State Approps"=state_approps,"State Match"=state_match)%>%
+  pivot_longer(cols=-name,names_to = "Type")%>%
+  mutate(Type=fct_relevel(Type,c("State Match","Federal Spending","State Approps","Local Approps")))%>%
+  ggplot(aes(y=value,x=name,fill=Type))+
+  geom_col()+
+  coord_flip()+
+    theme_minimal()+
+  theme(legend.position = "bottom")
+
+
+  
+              
 
 ```
 
