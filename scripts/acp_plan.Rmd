@@ -7,10 +7,12 @@ output: html_document
 
 ```{r}
 library(tidyverse)
+library(writexl)
 ```
 
 ```{r}
 addir<-"../data/cleaned/"
+outdir<-"../output/"
 ```
 
 
@@ -18,19 +20,33 @@ addir<-"../data/cleaned/"
 inst<-read_csv(paste0(addir,"institutions.csv"))
 ```
 
+# The Biden Free Community College Plan
+
+The Biden plan for free community college represents a huge change in how the federal government funds higher education. For the first time, the federal government will directly fund states to cover the full cost of tuition for students, using a large scale federal-state matching plan that is similar in some ways to how the federal government funds other priorities like health care or transportation. 
+
+The basic concept of the plan is this. The federal government will provide a subsidy to each state equal to 
+(a sort of) average of nationwide community college tuition times the number of full time equivalent students enrolled in community colleges. States in return must reduce tuition to 0 for all students enrolled in community colleges and must commit to providing a matching set of funds, topping out at 20 percent after a few years. 
+
+In this writeup I describe the implications for states of the Biden free community college plan. Which states will receive more funding, which states will receive less, and why?
+
 # Defining Community Colleges
 
-‘‘(2) COMMUNITY COLLEGE.—The term ‘community college’ means—
+As Kevin Carey and others have noted, there's no singular definition of a community college across the states. In fact, there are states do not have any institutions named "community colleges" Here's how the plan defines community colleges:
+
+"(2) COMMUNITY COLLEGE.—The term ‘community college’ means—
  a degree-granting public institution of
  higher education at which—
  the highest degree awarded is an
  associate degree; or
-an associate degree is the predominant degree awarded; 
+an associate degree is the predominant degree awarded; "
 
-
+Using data from the federal government's IPEDS database of colleges and universities, I used this definition to create a list of all institutions in every state that would qualify as community colleges. 
 
 ```{r}
 cc_inst<-inst%>%
+  group_by(stabbr)%>%
+  mutate(state_fte=sum(fteug,na.rm=TRUE))%>%
+  ungroup()%>%
   rowwise()%>%
   mutate(most_degrees=max(Bachelors, ## Select the largest from this list
                           Masters, 
@@ -40,21 +56,34 @@ cc_inst<-inst%>%
   mutate(promise_elig=ifelse(predom_assoc==1|hloffer==3,1,0 ))%>% ## OR highest offer is associates
   filter(control==1)%>% ## public only
   filter(promise_elig==1) ## eigible only
-         
+  
+sheet_list<-list()
+for (st in unique(cc_inst$stabbr)){
+cc_inst_sub<-cc_inst%>%filter(stabbr==st)%>%select(stabbr,instnm,control,sector,carnegie)
+sheet_list[[st]]<-cc_inst_sub
 
+ }
+names(sheet_list)<-unique(cc_inst$stabbr) 
+
+write_xlsx(sheet_list,path = paste(outdir,"eligible_insts.xlsx") )      
 ```
 
-This leaves 943 institutions eligible for the plan. 
+There are about 1300  institutions eligible for the plan, using these criteria. The list is available in excel format: here
 
 ## Median Tuition across the states
+
+The per-student subsidy for the plan will be based on an overall average of tuition across the states, specifically:
+
 "The median resident community college tuition and fees per student in all States, not weighted for enrollment, for the most recent award year for which data are available; "
 
-Given that this says all states I'm going to assume that they mean 
-the median of all average state tuitions. It looks like that's CT, with an average in state CC tuition of \$3,984. 
+Given that this says all states I'm going to assume that they mean the median of all average state tuitions. That is, I take the average unweighted tuition in each state, then take the median of that measure for all states.  It looks like that's Connecticut, with an average in state CC tuition of \$3,984. 
 ```{r}
+ak_avg<-inst%>%filter(stabbr=="AK",control==1)%>%summarize(ak_mean_tution=mean(tuition2,na.rm=TRUE))%>%as_vector()
+
 cc_inst%>%
   group_by(name)%>%
   summarize(mean_tuition=mean(tuition2,na.rm=TRUE))%>%
+  mutate(mean_tuition=ifelse(name=="Alaska",ak_avg,mean_tuition))%>%
   arrange(-mean_tuition)%>%
   print(n=50)
 ```
@@ -68,41 +97,50 @@ cc_inst<-cc_inst%>%
 ```
 
 ## How much will states get? 
+
+On its own, this isn't a super interesting question. Big states will get a lot, small states not so much. Right now the best way I think of to normalize this measure is to compare it to ALL fte in the state. 
+
 ```{r}
 cc_inst<-cc_inst%>%
-  mutate(fed_spend=median_tuition*fteug)
+  mutate(fed_spend=median_tuition*fteug)%>%
+    mutate(state_match=.2*fed_spend)
 
 ```
+
+The subsidy per ALL college students wil depend crucially on the distribution of FTE enrollment by state. States with a large proportion of students in eligible institiutions will get more, states with more four year enrolment, less. 
 
 ```{r}
 cc_inst%>%
   group_by(name)%>%
-  summarize(fed_spending=sum(fed_spend))%>%
-  mutate(name=fct_reorder(name,fed_spending))%>%
-  ggplot(aes(x=name,y=fed_spending))+
+  summarize(fed_spending=sum(fed_spend),state_fte=mean(state_fte))%>%
+  mutate(fed_spending_fte=fed_spending/state_fte)%>%
+  mutate(name=fct_reorder(name,fed_spending_fte))%>%
+  ggplot(aes(x=name,y=fed_spending_fte))+
   geom_col()+
   coord_flip()
 ```
 
 
-## How much will states have to pay?
-
-```{r}
-
-```
-
 ## What will this do to tuition+state+local approps if implemented? 
 
-States give up tuition revenue for community college students;
-states get median tuition for each fte,
-states must increase spending by 20% of the total sum spent in state. 
+
+Here's the basic formula for this plan again:
+
+- States give up tuition revenue for community college students;
+- States get median tuition for each fte,
+- States must increase spending by 20% of the total sum spent in state. 
+
+So OLD total revenues consisted of state appropriations plus local appropriations plus tuition revenues
+
+NEW totall revenues will consist of state appropriations plus local appropriations plus federal funding (~4k per student) plus state match (800 per student once fully funded). States are mandated not to decrease funding. 
 ```{r}
 cc_inst%>%
   mutate(eg_revs=tuition_revs+
            state_approps+
            local_approps)%>%
   mutate(state_local_revs=state_approps+local_approps)%>%
-  mutate(new_eg_revs=state_approps+local_approps+fed_spend+(.2*fed_spend))%>%
+
+  mutate(new_eg_revs=state_approps+local_approps+fed_spend+state_match)%>%
   group_by(name)%>%
   summarize(total_revs=sum(eg_revs,na.rm=TRUE),
             total_new_revs=sum(new_eg_revs,na.rm=TRUE),
@@ -112,7 +150,9 @@ cc_inst%>%
   mutate(state_local_fte=total_state_local/total_fte)%>%
   mutate(new_eg_revs_fte=total_new_revs/total_fte)%>%
   mutate(diff=new_eg_revs_fte-eg_revs_fte)%>%
-  arrange(-diff)%>%View()
+  arrange(-diff)
+
+
 
 
 ```

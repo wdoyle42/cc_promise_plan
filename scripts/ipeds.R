@@ -142,9 +142,11 @@ inst<-inst%>%
 
 inst<-inst%>%mutate(tuition2=as.numeric(tuition2))
 
-## Drop tirbal colleges
+## Drop tribal colleges
 
 inst<-inst%>%filter(tribal==2)
+
+inst<-inst%>%filter(fteug!=0)
 
 ## =============================================================================
 ## OUTPUT FINAL DATASET AS .CSV
