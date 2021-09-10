@@ -160,7 +160,7 @@ cc_totals_sum<-cc_totals%>%
 ```
 
 
-It looks like California community college students stand to gain $3,560 each, while Vermont students would see a decline in per student funding of about 5,000 unless the state steps in and makes up the difference. There are only 7 states where the federal plus state match would be lower than current tuition revenues. 
+It looks like California community college students stand to gain \$3,560 each, while Vermont students would see a decline in per student funding of about \$5,000 unless the state steps in and makes up the difference. There are only 7 states where the federal plus state match would be lower than current tuition revenues. 
 
 Here's a plot showing old and new revenues by state:
 
