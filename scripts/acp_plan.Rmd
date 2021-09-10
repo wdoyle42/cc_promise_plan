@@ -182,7 +182,8 @@ spend_sum<-cc_inst%>%
   summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
   mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
   mutate(new_total=state_approps+local_approps+fed_spend+state_match)%>%
-  mutate(name=fct_reorder(name,total))
+  mutate(old_total=state_approps+local_approps+tuition_revs)%>%
+  mutate(name=fct_reorder(name,new_total))
 knitr::kable(spend_sum)
 ```
 
@@ -196,11 +197,8 @@ spend_sum%>%
   geom_col()+
   coord_flip()+
     theme_minimal()+
-  theme(legend.position = "bottom")
-
-
-  
-              
+  theme(legend.position = "bottom")+
+  xlab("")
 
 ```
 
