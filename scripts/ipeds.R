@@ -24,14 +24,19 @@
 
 ##Libraries
 library(tidyverse)
-library(noncensus)
+library(crosswalkr)
 library(here)
 
 ## load functions
 source('functions.r')
 
+## directories
 rddir<-"../data/raw/"
 addir<-"../data/cleaned/"
+
+## create directories if they don't exist
+walk(c(rddir, addir), ~dir.create(.x, showWarnings = FALSE))
+
 ## =============================================================================
 ## BUILD DATASETS
 ## =============================================================================
@@ -114,12 +119,8 @@ inst<-
 ## Add full state names
 ## =============================================================================
 
-data(states)
-
-states<-states%>%
-  rename(stabbr=state)
-
-inst<-inst%>%left_join(states,by="stabbr")
+inst<-inst%>%left_join(stcrosswalk,by="stabbr") %>%
+    rename(name = stname, region = cenreg)
 
 ## =============================================================================
 ## Some misc cleanup
@@ -131,9 +132,6 @@ inst<-inst%>%
          obereg!=0, ## drop military academies
          unitid != 100636 ) ## drop cc of the airforce
 
-
-##Drop rownames
-rownames(inst) <- NULL
 
 ## Drop territories
 
@@ -156,4 +154,4 @@ inst<-inst%>%filter(Associates>0|Bachelors>0)
 ## =============================================================================
 
 
-write_csv(inst, file = paste0(addir, 'institutions.csv'))
+write_csv(inst, file = file.path(addir, 'institutions.csv'))
