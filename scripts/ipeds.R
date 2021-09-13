@@ -119,7 +119,8 @@ inst<-
 ## Add full state names
 ## =============================================================================
 
-inst<-inst%>%left_join(stcrosswalk,by="stabbr") %>% rename(name = stname)
+inst<-inst%>%left_join(stcrosswalk,by="stabbr") %>%
+    rename(name = stname, region = cenreg)
 
 ## =============================================================================
 ## Some misc cleanup
@@ -135,7 +136,7 @@ inst<-inst%>%
 ## Drop territories
 
 inst<-inst%>%
-  filter(!(is.na(cenreg)))
+  filter(!(is.na(region)))
 
 inst<-inst%>%mutate(tuition2=as.numeric(tuition2))
 

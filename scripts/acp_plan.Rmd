@@ -12,14 +12,14 @@ library(writexl)
 ```
 
 ```{r}
-addir<-"../data/cleaned/"
-outdir<-"../output/"
+addir<-"../data/cleaned"
+outdir<-"../output"
 dir.create(outdir, showWarnings = FALSE)
 ```
 
 
 ```{r}
-inst<-read_csv(paste0(addir,"institutions.csv"))
+inst<-read_csv(file.path(addir,"institutions.csv"))
 ```
 
 # America's College Promise Free Community College Plan
@@ -84,7 +84,7 @@ names(sheet_list)<-unique(cc_inst$stabbr)
 
 
 
-write_xlsx(sheet_list,path = paste(outdir,"eligible_insts.xlsx") )      
+write_xlsx(sheet_list,path = file.path(outdir,"eligible_insts.xlsx") )      
 ```
 
 There are about 1300  institutions eligible for the plan, using these criteria. The list is available in excel format: here
