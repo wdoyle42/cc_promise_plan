@@ -146,6 +146,10 @@ inst<-inst%>%mutate(tuition2=as.numeric(tuition2))
 
 inst<-inst%>%filter(tribal==2)
 
+## No degrees
+
+inst<-inst%>%filter(Associates>0|Bachelors>0)
+
 
 ## =============================================================================
 ## OUTPUT FINAL DATASET AS .CSV
