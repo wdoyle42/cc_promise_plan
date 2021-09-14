@@ -51,7 +51,7 @@ hd_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,ye
 
 ## Student Charges IC2019_AY
 filenames<-paste0("IC",year,'_AY',".zip")
-var<-c('unitid','tuition2')
+var<-c('unitid','tuition2','fee2')
 ic_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=year)
 
 
@@ -107,7 +107,7 @@ inst<-
   left_join(efia_df)%>%
   left_join(finance_df)%>%
   left_join(comp_df)%>%
-  rename(tuition_revs=f1b01,
+  rename(tuition_fee_revs=f1b01,
          fed_grants=f1b02,
          state_grants=f1b03,
          local_grants=f1b04a,
@@ -138,7 +138,8 @@ inst<-inst%>%
 inst<-inst%>%
   filter(!(is.na(region)))
 
-inst<-inst%>%mutate(tuition2=as.numeric(tuition2))
+inst<-inst%>%mutate(tuition2=as.numeric(tuition2))%>%
+  mutate(fee2=as.numeric(fee2))
 
 ## Drop tribal colleges
 

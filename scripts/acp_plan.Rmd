@@ -3,12 +3,16 @@ title: "America's College Promise Plan"
 author: "Will Doyle"
 date: "9/13/2021"
 output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r,echo=FALSE,message=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, results ='hide',include=TRUE,message=FALSE)
 library(tidyverse)
 library(writexl)
+library(scales)
 ```
 
 ```{r}
@@ -17,45 +21,62 @@ outdir<-"../output"
 dir.create(outdir, showWarnings = FALSE)
 ```
 
-
 ```{r}
 inst<-read_csv(file.path(addir,"institutions.csv"))
 ```
 
 # America's College Promise Free Community College Plan
 
-The Biden plan for free community college represents a huge change in how the federal government funds higher education. For the first time, the federal government will directly fund states to cover the full cost of tuition for students, using a large scale federal-state matching plan that is similar in some ways to how the federal government funds other priorities like health care or transportation. 
+The Biden plan for free community college represents a huge change in
+how the federal government funds higher education. For the first time,
+the federal government will directly fund states to cover the full cost
+of tuition for students, using a large scale federal-state matching plan
+that is similar in some ways to how the federal government funds other
+priorities like health care or transportation.
 
-Over the last few days I've been trying to answer the following questions:
+Over the last few days I've been trying to answer the following
+questions:
 
-Which institutions in each state will be eligible?
-How much will the plan provide? 
-How much will states have to pay?
-What will be the effective subsidy among all college students by state?
-Which states will see increases or decreases in per-student funding levels under the provision of the plan?
-Which states will gain or lose revenues based on participating in the plan. 
+Which institutions in each state will be eligible? How much will the
+plan provide? How much will states have to pay? What will be the
+effective subsidy among all college students by state? Which states will
+see increases or decreases in per-student funding levels under the
+provision of the plan? Which states will gain or lose revenues based on
+participating in the plan.
 
-Below are my current  provisional answers to those questions.
+Below are my current provisional answers to those questions.
 
-The basic concept of the plan is this. The federal government will provide a subsidy to each state equal to eighty percent of  
-(a sort of) average of nationwide community college tuition times the number of full time equivalent students enrolled in community colleges. States in return must reduce tuition to 0 for all students enrolled in community colleges for their first sixty credits (two years, assuming 15 credits/semester) and must commit to providing a matching set of funds, topping out at 20 percent after a few years. 
+The basic concept of the plan is this. The federal government will
+provide a subsidy to each state equal to eighty percent of\
+(a sort of) average of nationwide community college tuition times the
+number of full time equivalent students enrolled in community colleges.
+States in return must reduce tuition to 0 for all students enrolled in
+community colleges for their first sixty credits (two years, assuming 15
+credits/semester) and must commit to providing a matching set of funds,
+topping out at 20 percent after a few years.
 
-In this writeup I describe the implications for states of the Biden free community college plan. Which states will receive more funding, which states will receive less, and why?
+In this writeup I describe the implications for states of the Biden free
+community college plan. Which states will receive more funding, which
+states will receive less, and why?
 
 # Defining Community Colleges
 
-The first question is: which institutions (and then students) are eligible?
+The first question is: which institutions (and then students) are
+eligible?
 
-As Kevin Carey and others have noted, there's no singular definition of a community college across the states. In fact, there are states do not have any institutions named "community colleges" Here's how the plan defines community colleges:
+As Kevin Carey and others have noted, there's no singular definition of
+a community college across the states. In fact, there are states do not
+have any institutions named "community colleges" Here's how the plan
+defines community colleges:
 
-"(2) COMMUNITY COLLEGE.—The term ‘community college’ means—
- a degree-granting public institution of
- higher education at which—
- the highest degree awarded is an
- associate degree; or
-an associate degree is the predominant degree awarded; "
+"(2) COMMUNITY COLLEGE.---The term 'community college' means--- a
+degree-granting public institution of higher education at which--- the
+highest degree awarded is an associate degree; or an associate degree is
+the predominant degree awarded; "
 
-Using data from the federal government's IPEDS database of colleges and universities, I used this definition to create a list of all institutions in every state that would qualify as community colleges. 
+Using data from the federal government's IPEDS database of colleges and
+universities, I used this definition to create a list of all
+institutions in every state that would qualify as community colleges.
 
 ```{r}
 cc_inst<-inst%>%
@@ -87,49 +108,85 @@ names(sheet_list)<-unique(cc_inst$stabbr)
 write_xlsx(sheet_list,path = file.path(outdir,"eligible_insts.xlsx") )      
 ```
 
-There are about 1000 institutions eligible for the plan, using these criteria. The list is available in excel format: here
+There are about `r dim(cc_inst)[2]` institutions eligible for the plan, using these
+criteria. The list is available in [excel format](https://github.com/wdoyle42/cc_promise_plan/raw/main/output/%20eligible_insts.xlsx)
 
-
-
-In most states institutions award either associates or bachelors degrees. In a few states there are a number of institutions that are fairly close to this cutoff. For instance, Albany State and College of Coastal GA are eligible, but just barely. 
+In most states institutions award either associates or bachelors
+degrees. In a few states there are a number of institutions that are
+fairly close to this cutoff. For instance, Albany State and College of
+Coastal GA are eligible, but just barely.
 
 ## Eligibile Institutions in Georgia
+
 ```{r,results='asis'}
 cc_inst%>%filter(stabbr=="GA")%>%select(stabbr,instnm,control,sector,carnegie,prop_assoc)%>%arrange(-prop_assoc)%>%knitr::kable()
 ```
 
-The big question about eligibility moving forward will be whether institutions that are currently Bachelor's degree granting begin awarding associates degrees in passing. For a substantial number of institutions this could tip the balance to becoming predominantly associates degree granting. 
+The big question about eligibility moving forward will be whether
+institutions that are currently Bachelor's degree granting begin
+awarding associates degrees in passing. For a substantial number of
+institutions this could tip the balance to becoming predominantly
+associates degree granting.
 
 ## Median Community College Tuition Across the States
 
-The per-student subsidy for the plan will be based on an overall average of tuition across the states, specifically:
+The per-student subsidy for the plan will be based on an overall average
+of tuition across the states, specifically:
 
-"The median resident community college tuition and fees per student in all States, not weighted for enrollment, for the most recent award year for which data are available; "
+"The median resident community college tuition and fees per student in
+all States, not weighted for enrollment, for the most recent award year
+for which data are available; "
 
-Given that this says all states I'm going to assume that they mean the median of all *average* state tuitions. That is, I take the average unweighted tuition in each state, then take the median of that measure for all states.  It looks like that's Connecticut, with an average in state CC tuition of \$3,984. Part of this depends on how Alaska is handled, but it's either Connecticut at \$3,984 or West Virginia at \$4,000, so \$4,000 seems most likely. 
 ```{r,results='asis'}
-ak_avg<-inst%>%filter(stabbr=="AK",control==1)%>%summarize(ak_mean_tution=mean(tuition2,na.rm=TRUE))%>%as_vector()
+ak_avg<-inst%>%
+  filter(stabbr=="AK",control==1)%>%
+  summarize(ak_mean_tution=mean((tuition2+fee2),na.rm=TRUE))%>%
+  as_vector()
 
-cc_inst%>%
+cc_tuit_table<-cc_inst%>%
   group_by(name)%>%
-  summarize(mean_tuition=mean(tuition2,na.rm=TRUE))%>%
-  mutate(mean_tuition=ifelse(name=="Alaska",ak_avg,mean_tuition))%>%
-  arrange(-mean_tuition)%>%
-  knitr::kable()
+  summarize(mean_tuition_fees=mean((tuition2+fee2),na.rm=TRUE))%>%
+  mutate(mean_tuition_fees=ifelse(name=="Alaska",ak_avg,mean_tuition_fees))%>%
+  arrange(-mean_tuition_fees)%>%
+    mutate(mean_tuition_fees=dollar(mean_tuition_fees))%>%
+  rename("Average State Tuition and Fees"=mean_tuition_fees)
+  knitr::kable(cc_tuit_table)
+
+median_tuition=cc_inst%>%
+  group_by(name)%>%
+  summarize(mean_tuition_fees=mean((tuition2+fee2),na.rm=TRUE))%>%
+  mutate(mean_tuition_fees=ifelse(name=="Alaska",ak_avg,mean_tuition_fees))%>%
+  summarize(median_tuition_fees=median(mean_tuition_fees))%>%
+  as_vector()
+
+
+fed_subsidy=.8*median_tuition
+
+state_match=.2*median_tuition
+
 ```
 
-```{r}
-cc_inst<-cc_inst%>%
-  group_by(name)%>%
-  mutate(median_tuition=3984)
-  
-```
 
-## How much will states get? 
 
-When fully phased in, states will receive \$3,200 per full time equivalent student in community colleges enrolled in their first sixty credit hours. 
+Given that this says all states I'm going to assume that they mean the
+median of all *average* state tuition and required fees. That is, I take the average
+unweighted tuition and fees in each state, then take the median of that measure
+for all states. It looks like that's Oklahoma and West Virginia , with an average in
+state CC tuition and fees of `r median_tuition`. Part of this depends on how Alaska is
+handled, but something around \$4,600 seems most likely. This will of course depend on what happens to community college tuitions in the next couple of years.  
 
-The total amount that states receive  isn't a super interesting question. Big states will get a lot, small states not so much. Right now the best way I can think of to normalize this measure is to compare it to ALL fte in the state. Another comparison would be to all 18-24 year olds in the state.  
+## How much will states get?
+
+When fully phased in, states will receive `r fed_subsidy` per full time
+equivalent student in community colleges enrolled in the first six
+semesters of enrollment. (Question-- is this JUST enrollment at the one
+community college or first sixe semesters overall?)
+
+The total amount that states receive isn't a super interesting question.
+Big states will get a lot, small states not so much. Right now the best
+way I can think of to normalize this measure is to compare it to ALL fte
+in the state. Another comparison would be to all 18-24 year olds in the
+state.
 
 ```{r}
 cc_inst<-cc_inst%>%
@@ -137,9 +194,13 @@ cc_inst<-cc_inst%>%
     mutate(state_match=(median_tuition*.2)*fteug)
 ```
 
-The subsidy per ALL college students will depend crucially on the distribution of FTE enrollment by state. States with a large proportion of students in eligible institutions will get more, states with more four year enrollment, less. 
+The subsidy per ALL college students will depend crucially on the
+distribution of FTE enrollment by state. States with a large proportion
+of students in eligible institutions will get more, states with more
+four year enrollment, less.
 
 ## Total Federal Spending for ACP by Total (not CC) FTE Enrollment
+
 ```{r,fig.height=10,fig.width=7}
 cc_inst%>%
   group_by(name)%>%
@@ -154,22 +215,37 @@ cc_inst%>%
   ylab("Federal Spending per All FTE in State")
 ```
 
-Subsidies are just basically a function of community college enrollment. So, the big winners will be Wyoming, New Mexico and California. Vermont and New Hampshire, not so much. Some big states will get pretty low per-student subsidies, notably New York, Pennsylvania and Massachusetts.
+Subsidies are just basically a function of community college enrollment.
+So, the big winners will be Wyoming, New Mexico and California. Vermont
+and New Hampshire, not so much. Some big states will get pretty low
+per-student subsidies, notably New York, Pennsylvania and Massachusetts.
 
-A big second order effect would be the shift in enrollment to community colleges. In states like TN that implemented some version of free or reduced price community college for a set of students, there was a fairly substantial shift away from four-year institutions toward community colleges. This would of course change the overall subsidy pattern substantially.
+A big second order effect would be the shift in enrollment to community
+colleges. In states like TN that implemented some version of free or
+reduced price community college for a set of students, there was a
+fairly substantial shift away from four-year institutions toward
+community colleges. This would of course change the overall subsidy
+pattern substantially.
 
-
-## What will this do to tuition+state+local approps if implemented? 
+## What will this do to tuition+state+local approps if implemented?
 
 Here's the basic formula for this plan again:
 
-- States give up tuition revenue for community college students;
-- States get 80 percent of nationwide median tuition for each fte enrolled in community college,
-- States must increase spending by 20% of the total sum spent in state (when fully phased in). 
+-   States give up tuition revenue for community college students;
+-   States get 80 percent of nationwide median tuition for each fte
+    enrolled in community college,
+-   States must increase spending by 20% of the total sum spent in state
+    (when fully phased in).
 
-So OLD total revenues consisted of state appropriations plus local appropriations plus tuition revenues.
+So OLD total revenues consisted of state appropriations plus local
+appropriations plus tuition revenues.
 
-NEW total revenues will consist of state appropriations plus local appropriations plus federal funding (~3200 per student) plus state match (~800 per student once fully funded). There's a maintenance of effort provision so states are mandated not to decrease funding. 
+NEW total revenues will consist of state appropriations plus local
+appropriations plus federal funding (`r fed_subsidy` per student) plus
+state match (`r state_match`) per student once fully funded). There's
+a maintenance of effort provision so states are mandated not to decrease
+funding.
+
 ```{r}
 cc_totals<-cc_inst%>%
   mutate(eg_revs=tuition_revs+
@@ -189,7 +265,11 @@ cc_totals<-cc_inst%>%
   arrange(-diff)
 ```
 
-The following table shows current education and general revenues (state and local appropriations plus tuition) per full time equivalent community college student in each states, followed by the amount of revenues from the proposal-- state and local appropriations plus federal funding plus state match. 
+The following table shows current education and general revenues (state
+and local appropriations plus tuition) per full time equivalent
+community college student in each states, followed by the amount of
+revenues from the proposal-- state and local appropriations plus federal
+funding plus state match.
 
 ```{r,results='asis'}
 
@@ -200,7 +280,11 @@ cc_totals_sum<-cc_totals%>%
   cc_totals_sum%>%knitr::kable()
 ```
 
-It looks like California community college students stand to gain \$2,800 each, while Vermont students would see a decline in per student funding of about \$5,800 unless the state steps in and makes up the difference. There are 14 states where the federal plus state match would be lower than current tuition revenues. 
+It looks like California community college students stand to gain
+\$2,800 each, while Vermont students would see a decline in per student
+funding of about \$5,800 unless the state steps in and makes up the
+difference. There are 14 states where the federal plus state match would
+be lower than current tuition revenues.
 
 Here's a plot showing old and new revenues by state:
 
@@ -218,7 +302,9 @@ cc_totals%>%
   theme(legend.position = "bottom")
 ```
 
-Here's a more detailed table with all of the components that go into this calculation. 
+Here's a more detailed table with all of the components that go into
+this calculation.
+
 ```{r,results='asis'}
 spend_sum<-cc_inst%>%
   filter(!stabbr=="AK")%>%
@@ -231,7 +317,8 @@ spend_sum<-cc_inst%>%
 knitr::kable(spend_sum)
 ```
 
-And here's the likely distribution of revenues across the major sources by state:
+And here's the likely distribution of revenues across the major sources
+by state:
 
 ```{r,fig.height=10,fig.width=7}
 spend_sum%>%
@@ -248,23 +335,53 @@ spend_sum%>%
 
 ```
 
-From the state perspective, one way to look at this is just the simple tradeoff between new revenues from the feds minus lost revenues from tuition plus extra revenues from the state. If this is positive,then the state will be getting more from the feds in the subsidy than it will be losing from the tuition revenue it's foregoing plus the state match it will have to spend. 
+From the state perspective, one way to look at this is just the simple
+tradeoff between new revenues from the feds minus lost revenues from
+tuition plus extra revenues from the state. If this is positive,then the
+state will be getting more from the feds in the subsidy than it will be
+losing from the tuition revenue it's foregoing plus the state match it
+will have to spend.
 
 ```{r,results='asis'}
 spend_sum<-cc_inst%>%
   group_by(name)%>%
   summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
   mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
-  mutate(state_match_plus_tuition_revs=tuition_revs+state_match)%>%
-  mutate(diff=fed_spend-state_match_plus_tuition_revs)%>%
+  mutate(state_match_plus_tuition_fee_revs=tuition_revs+state_match)%>%
+  mutate(diff=fed_spend-state_match_plus_tuition_fee_revs)%>%
   arrange(-diff)%>%
   mutate(name=fct_reorder(name,diff))%>%
   ungroup()%>%
-  select(name,fed_spend,state_match_plus_tuition_revs,diff)
+  select(name,fed_spend,state_match_plus_tuition_fee_revs,diff)
   knitr::kable(spend_sum)
 ```
 
-From this perspective, it looks like there are about 35 states that would have to increase funding for community college students in order to participate. Of these, 9 would have to increase funding by $500 or so, 5 would have to increase funding by 500-1000, 15 would have to increase funding by ~1000-2000 and 6 would have to increase funding by more than 2000 if they wanted per-student subsidy levels at community colleges to remain the same.
+From this perspective, it looks like there are about
+`r length(spend_sum$diff[spend_sum$diff<=0])` 
+states that would have to
+increase funding for community college students in order to participate.
+Of these,
+`r  length(spend_sum$diff[spend_sum$diff<0&spend_sum$diff>=-500])` would
+have to increase funding by
+\$500 or so, 
+`r length(spend_sum$diff[spend_sum$diff<(-500)&spend_sum$diff>=-1000])` 
+would have to increase funding by \$500-1000,
+
+`r length(spend_sum$diff[spend_sum$diff<(-1000)&spend_sum$diff>=-2000])` 
+would have to increase funding by \$1000-2000 and 
+`r length(spend_sum$diff[spend_sum$diff<=-2000])`
+would have to increase funding by more than \$2000 if they wanted
+per-student subsidy levels at community colleges to remain the same.
+
+Like I said, not sure if this is correct yet, I welcome comments and
+criticisms: what am I getting wrong? Code and data available here for
+anyone else who wants to use it.
 
 
-Like I said, not sure if this is correct yet, I welcome comments and criticisms: what am I getting wrong? Code and data available here for anyone else who wants to use it. 
+2021-09-14: Updates! 
+
+In a previous version I did not include required fees in calculating median tuition and fees across the states. This has been updated above. 
+
+Similarly the list of institutions included an error, and the correct number is now included. 
+
+
