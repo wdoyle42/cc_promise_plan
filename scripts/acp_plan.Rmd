@@ -25,7 +25,6 @@ dir.create(outdir, showWarnings = FALSE)
 inst<-read_csv(file.path(addir,"institutions.csv"))
 ```
 
-# America's College Promise Free Community College Plan
 
 The Biden plan for free community college represents a huge change in
 how the federal government funds higher education. For the first time,

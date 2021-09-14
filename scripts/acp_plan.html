@@ -171,8 +171,6 @@ pre code {
 </div>
 
 
-<div id="americas-college-promise-free-community-college-plan" class="section level1">
-<h1>America’s College Promise Free Community College Plan</h1>
 <p>The Biden plan for free community college represents a huge change in how the federal government funds higher education. For the first time, the federal government will directly fund states to cover the full cost of tuition for students, using a large scale federal-state matching plan that is similar in some ways to how the federal government funds other priorities like health care or transportation.</p>
 <p>Over the last few days I’ve been trying to answer the following questions:</p>
 <p>Which institutions in each state will be eligible? How much will the plan provide? How much will states have to pay? What will be the effective subsidy among all college students by state? Which states will see increases or decreases in per-student funding levels under the provision of the plan? Which states will gain or lose revenues based on participating in the plan.</p>
@@ -180,14 +178,13 @@ pre code {
 <p>The basic concept of the plan is this. The federal government will provide a subsidy to each state equal to eighty percent of<br />
 (a sort of) average of nationwide community college tuition times the number of full time equivalent students enrolled in community colleges. States in return must reduce tuition to 0 for all students enrolled in community colleges for their first sixty credits (two years, assuming 15 credits/semester) and must commit to providing a matching set of funds, topping out at 20 percent after a few years.</p>
 <p>In this writeup I describe the implications for states of the Biden free community college plan. Which states will receive more funding, which states will receive less, and why?</p>
-</div>
 <div id="defining-community-colleges" class="section level1">
 <h1>Defining Community Colleges</h1>
 <p>The first question is: which institutions (and then students) are eligible?</p>
 <p>As Kevin Carey and others have noted, there’s no singular definition of a community college across the states. In fact, there are states do not have any institutions named “community colleges” Here’s how the plan defines community colleges:</p>
 <p>“(2) COMMUNITY COLLEGE.—The term ‘community college’ means— a degree-granting public institution of higher education at which— the highest degree awarded is an associate degree; or an associate degree is the predominant degree awarded;”</p>
 <p>Using data from the federal government’s IPEDS database of colleges and universities, I used this definition to create a list of all institutions in every state that would qualify as community colleges.</p>
-<p>There are about 1000 institutions eligible for the plan, using these criteria. The list is available in excel format: here</p>
+<p>There are about 45 institutions eligible for the plan, using these criteria. The list is available in <a href="https://github.com/wdoyle42/cc_promise_plan/raw/main/output/%20eligible_insts.xlsx">excel format</a></p>
 <p>In most states institutions award either associates or bachelors degrees. In a few states there are a number of institutions that are fairly close to this cutoff. For instance, Albany State and College of Coastal GA are eligible, but just barely.</p>
 <div id="eligibile-institutions-in-georgia" class="section level2">
 <h2>Eligibile Institutions in Georgia</h2>
@@ -467,7 +464,6 @@ pre code {
 <h2>Median Community College Tuition Across the States</h2>
 <p>The per-student subsidy for the plan will be based on an overall average of tuition across the states, specifically:</p>
 <p>“The median resident community college tuition and fees per student in all States, not weighted for enrollment, for the most recent award year for which data are available;”</p>
-<p>Given that this says all states I’m going to assume that they mean the median of all <em>average</em> state tuitions. That is, I take the average unweighted tuition in each state, then take the median of that measure for all states. It looks like that’s Connecticut, with an average in state CC tuition of $3,984. Part of this depends on how Alaska is handled, but it’s either Connecticut at $3,984 or West Virginia at $4,000, so $4,000 seems most likely.</p>
 <table>
 <thead>
 <tr class="header">
@@ -674,6 +670,7 @@ pre code {
 </tr>
 </tbody>
 </table>
+<p>Given that this says all states I’m going to assume that they mean the median of all <em>average</em> state tuition and required fees. That is, I take the average unweighted tuition and fees in each state, then take the median of that measure for all states. It looks like that’s Oklahoma and West Virginia , with an average in state CC tuition and fees of 4653.3571429. Part of this depends on how Alaska is handled, but something around $4,600 seems most likely. This will of course depend on what happens to community college tuitions in the next couple of years.</p>
 </div>
 <div id="how-much-will-states-get" class="section level2">
 <h2>How much will states get?</h2>
@@ -1884,8 +1881,12 @@ pre code {
 </tr>
 </tbody>
 </table>
-<p>From this perspective, it looks like there are about 30 states that would have to increase funding for community college students in order to participate. Of these, 7 would have to increase funding by $500 or so, 10 would have to increase funding by $500-1000,<code>r length(spend_sum$diff[spend_sum$diff&lt;(-1000)&amp;spend_sum$diff&gt;=-2000])</code> would have to increase funding by 1000-2000 and 5 would have to increase funding by more than $2000 if they wanted per-student subsidy levels at community colleges to remain the same.</p>
+<p>From this perspective, it looks like there are about 30 states that would have to increase funding for community college students in order to participate. Of these, 7 would have to increase funding by $500 or so, 10 would have to increase funding by $500-1000,</p>
+<p>8 would have to increase funding by $1000-2000 and 5 would have to increase funding by more than $2000 if they wanted per-student subsidy levels at community colleges to remain the same.</p>
 <p>Like I said, not sure if this is correct yet, I welcome comments and criticisms: what am I getting wrong? Code and data available here for anyone else who wants to use it.</p>
+<p>2021-09-14: Updates!</p>
+<p>In a previous version I did not include required fees in calculating median tuition and fees across the states. This has been updated above.</p>
+<p>Similarly the list of institutions included an error, and the correct number is now included.</p>
 </div>
 </div>
 
