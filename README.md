@@ -9,7 +9,7 @@ From the `scripts` directory
 2. Run `rmarkdown::render('acp_plan.Rmd')`
 
 You can use RStudio or the terminal. From the terminal (assuming you
-are in the top-level directory of `cc_promise_plan`:
+are in the top-level directory of `cc_promise_plan`):
 
 ``` shell
 $ cd ./scripts
