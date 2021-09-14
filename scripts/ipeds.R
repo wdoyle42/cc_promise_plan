@@ -31,8 +31,8 @@ library(here)
 source('functions.r')
 
 ## directories
-rddir<-"../data/raw/"
-addir<-"../data/cleaned/"
+rddir <- file.path(here(), "data", "raw")
+addir <- file.path(here(), "data", "cleaned")
 
 ## create directories if they don't exist
 walk(c(rddir, addir), ~dir.create(.x, showWarnings = FALSE))
@@ -41,118 +41,105 @@ walk(c(rddir, addir), ~dir.create(.x, showWarnings = FALSE))
 ## BUILD DATASETS
 ## =============================================================================
 
-year<-2019
+## primary year
+year <- 2019
 
-## IPEDS institutional characteristics (using HD files)
+## data sets
+filenames <- c("HD2019.zip",
+               "IC2019_AY.zip",
+               "EFIA2019.zip",
+               "F1718_F1A.zip",
+               "C2018_C.zip")
 
-filenames<-paste0('HD',year,'.zip')
-var <- c('unitid','instnm','city','stabbr','control','sector','tribal' ,'carnegie', 'c18ipug','c15basic','obereg','hloffer','latitude','longitud','city','addr','zip')
-hd_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=year)
+## variables to use with each data set
+vars <- list(
+    ## HD2019.zip
+    c("unitid","instnm","city","stabbr","control","sector","tribal",
+      "carnegie", "c18ipug","c15basic","obereg","hloffer","latitude",
+      "longitud","city","addr","zip"),
+    ## IC2019_AY.zip
+    c("unitid","tuition2","fee2"),
+    ## EFIA2019.zip
+    c("unitid","fteug"),
+    ## F1718_F1A.zip
+    c("unitid","f1b01","f1b02","f1b03","f1b04a","f1b11","f1b12"),
+    ## C2018_C.zip
+    c("unitid","awlevelc","cstotlt")
+)
 
-## Student Charges IC2019_AY
-filenames<-paste0("IC",year,'_AY',".zip")
-var<-c('unitid','tuition2','fee2')
-ic_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars = var,years=year)
-
-
-## IPEDS enrollments (using EFIA files)
-
-filenames <-paste0('EFIA',year,'.zip')
-var <- c('unitid','fteug')
-efia_df <- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=year)
-
-## Finance
-
-filenames<-"F1718_F1A.zip"
-
-var<-c('unitid',"f1b01","f1b02","f1b03","f1b04a", "f1b11","f1b12")
-var<-tolower(var)
-
-finance_df<- build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=year)
-
-## Degrees awarded
-filenames<-'C2018_C.zip'
-var<-c('unitid','awlevelc','cstotlt')
-comp_df<-build.dataset.ipeds(filenames=filenames, datadir = rddir, vars= var ,years=year)
-comp_df<-comp_df%>%
-  pivot_wider(id_cols=c("unitid","year"),
-              names_from = awlevelc,
-              values_from =cstotlt )
-names(comp_df)[3:9]<-c("Bachelors",
-                       "Masters",
-                       "PhD",
-                       "Cert> 1",
-                       "Postbac",
-                       "Associates",
-                       "Cert<1")
-comp_df<-comp_df%>%
-  mutate_all(replace_na,0)
-
-# ## AWlevel codes
-#   3	Associate's degree
-# 5	Bachelor's degree
-# 7	Master's degree
-# 9	Doctor's degree
-# 10	Postbaccalaureate or Post-master's certificate
-# 1	Award of less than 1 academic year
-# 2	Award of at least 1 but less than 4 academic years
-
-## =============================================================================
-## MERGE DATASETS
-## =============================================================================
-
-inst<-
-  hd_df%>%
-  left_join(ic_df)%>%
-  left_join(efia_df)%>%
-  left_join(finance_df)%>%
-  left_join(comp_df)%>%
-  rename(tuition_fee_revs=f1b01,
-         fed_grants=f1b02,
-         state_grants=f1b03,
-         local_grants=f1b04a,
-         state_approps=f1b11,
-         local_approps=f1b12)%>%
-  as_tibble()
-
-## =============================================================================
-## Add full state names
-## =============================================================================
-
-inst<-inst%>%left_join(stcrosswalk,by="stabbr") %>%
-    rename(name = stname, region = cenreg)
-
-## =============================================================================
-## Some misc cleanup
-## =============================================================================
-
-inst<-inst%>%
-  filter(fteug>0,   ##Drop if no undergrads
-         sector!=0,  ## drop admin units
-         obereg!=0, ## drop military academies
-         unitid != 100636 ) ## drop cc of the airforce
-
-
-## Drop territories
-
-inst<-inst%>%
-  filter(!(is.na(region)))
-
-inst<-inst%>%mutate(tuition2=as.numeric(tuition2))%>%
-  mutate(fee2=as.numeric(fee2))
-
-## Drop tribal colleges
-
-inst<-inst%>%filter(tribal==2)
-
-## No degrees
-
-inst<-inst%>%filter(Associates>0|Bachelors>0)
-
+## walk through building each data set
+inst <- map2(filenames,
+             vars,
+             ~ {
+                 ## download and build the data set
+                 tmp <- build.dataset.ipeds(filenames = .x,
+                                          datadir = rddir,
+                                          vars = .y,
+                                          years = year) %>%
+                     as_tibble()
+                 if (.x == "C2018_C.zip") {
+                     tmp <- tmp %>%
+                         ## AWlevel codes
+                         ## 3	Associate's degree
+                         ## 5	Bachelor's degree
+                         ## 7	Master's degree
+                         ## 9	Doctor's degree
+                         ## 10	Postbaccalaureate or Post-master's certificate
+                         ## 1	Award of less than 1 academic year
+                         ## 2	Award of at least 1 but less than 4 academic years
+                         mutate(awlevelc = case_when(
+                                    awlevelc == 1 ~ "Cert<1",
+                                    awlevelc == 2 ~ "Cert>1",
+                                    awlevelc == 3 ~ "Associates",
+                                    awlevelc == 5 ~ "Bachelors",
+                                    awlevelc == 7 ~ "Masters",
+                                    awlevelc == 9 ~ "PhD",
+                                    awlevelc == 10 ~ "Postbac"
+                                )) %>%
+                         pivot_wider(id_cols = c("unitid", "year"),
+                                     names_from = awlevelc,
+                                     values_from = cstotlt) %>%
+                         mutate_all(replace_na,0)
+                     tmp
+                 } else {
+                     tmp
+                 }
+             }) %>%
+    ## join data sets
+    reduce(left_join, by = c("unitid", "year")) %>%
+    ## rename some variables
+    rename(tuition_fee_revs = f1b01,
+           fed_grants = f1b02,
+           state_grants = f1b03,
+           local_grants = f1b04a,
+           state_approps = f1b11,
+           local_approps = f1b12) %>%
+    ## add state and region information
+    left_join(crosswalkr::stcrosswalk, by = "stabbr") %>%
+    ## rename state and region vars
+    rename(name = stname,
+           region = cenreg) %>%
+    ## misc cleanup
+    filter(fteug > 0,            # drop if no undergrads
+           sector != 0,          # drop admin units
+           obereg != 0,          # drop military academies
+           unitid != 100636) %>% # drop cc of the airforce
+    ## drop territories
+    filter(!is.na(region)) %>%
+    ## new vars
+    mutate(tuition2 = as.numeric(tuition2),
+           fee2 = as.numeric(fee2)) %>%
+    ## drop tribal colleges
+    filter(tribal == 2) %>%
+    ## drop those with no degrees
+    filter(Associates > 0 | Bachelors > 0)
 
 ## =============================================================================
 ## OUTPUT FINAL DATASET AS .CSV
 ## =============================================================================
 
-
 write_csv(inst, file = file.path(addir, 'institutions.csv'))
+
+## -----------------------------------------------------------------------------
+## end script
+################################################################################

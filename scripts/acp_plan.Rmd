@@ -247,7 +247,7 @@ funding.
 
 ```{r}
 cc_totals<-cc_inst%>%
-  mutate(eg_revs=tuition_revs+
+  mutate(eg_revs=tuition_fee_revs+
            state_approps+
            local_approps)%>%
   mutate(state_local_revs=state_approps+local_approps)%>%
@@ -308,10 +308,10 @@ this calculation.
 spend_sum<-cc_inst%>%
   filter(!stabbr=="AK")%>%
   group_by(name)%>%
-  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
-  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  summarize(across(.cols=c("fteug","tuition_fee_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_fee_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
   mutate(new_total=state_approps+local_approps+fed_spend+state_match)%>%
-  mutate(old_total=state_approps+local_approps+tuition_revs)%>%
+  mutate(old_total=state_approps+local_approps+tuition_fee_revs)%>%
   mutate(name=fct_reorder(name,new_total))
 knitr::kable(spend_sum)
 ```
@@ -344,9 +344,9 @@ will have to spend.
 ```{r,results='asis'}
 spend_sum<-cc_inst%>%
   group_by(name)%>%
-  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
-  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
-  mutate(state_match_plus_tuition_fee_revs=tuition_revs+state_match)%>%
+  summarize(across(.cols=c("fteug","tuition_fee_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_fee_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  mutate(state_match_plus_tuition_fee_revs=tuition_fee_revs+state_match)%>%
   mutate(diff=fed_spend-state_match_plus_tuition_fee_revs)%>%
   arrange(-diff)%>%
   mutate(name=fct_reorder(name,diff))%>%

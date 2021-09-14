@@ -23,7 +23,7 @@
 library(tidyverse)
 
 check.download.ipeds <- function(filenames, dir,...) {
-    
+
     ## subset to files not found in directory
     dnld <- filenames[!(filenames %in% list.files(dir))]
 
@@ -32,8 +32,8 @@ check.download.ipeds <- function(filenames, dir,...) {
     sapply(dnld, function(x) {
 
         message(paste0('\n Downloading ', x, '\n'))
-        download.file(paste0(base, x), paste0(dir, x), 'curl')
-        
+        download.file(paste0(base, x), file.path(dir, x), 'curl')
+
     })
 
     ## return files list
@@ -55,14 +55,14 @@ read.zip <- function(zipfile, dir) {
     dir.create(zipdir)
 
     ## unzip the file into the dir
-    unzip(paste0(dir, zipfile), exdir = zipdir)
+    unzip(file.path(dir, zipfile), exdir = zipdir)
 
     ## get the files into the dir
     files <- list.files(zipdir, recursive = TRUE)
 
     print(files)
 
-    ## chose rv file if more than two 
+    ## chose rv file if more than two
     if (length(files) > 1) {
 
         file <- grep('*_rv.csv', files, value = TRUE)
@@ -73,11 +73,11 @@ read.zip <- function(zipfile, dir) {
 
         file <- files[1]
 
-        print(file) 
+        print(file)
     }
 
     ## get the full name of the file
-    file <- paste(zipdir, file, sep = '/')
+    file <- file.path(zipdir, file)
 
     ## read the file
     message(paste('\n Reading data from zip file',file,'\n'))
@@ -92,11 +92,11 @@ read.zip <- function(zipfile, dir) {
 build.dataset.ipeds <- function(filenames, datadir,
                                 conditions = NULL, vars = NULL, years) {
 
-    ## use check.download.ipeds function to check, download, store files 
+    ## use check.download.ipeds function to check, download, store files
     f <- check.download.ipeds(filenames, datadir)
 
     print(f)
-    
+
     ## loop through files
     for (i in 1:length(f)) {
 
@@ -130,11 +130,11 @@ build.dataset.ipeds <- function(filenames, datadir,
 
         ## append dataset to prior data (data0)
         message(paste0('\n Appending dataset: ', f[i], '\n'))
-        
+
         if (length(f)==1){
-          
+
           result<-data
-        
+
           }  else if(i == 1) {
 
             ## save a new data name for later rbind
@@ -146,7 +146,7 @@ build.dataset.ipeds <- function(filenames, datadir,
             result <- full_join(data0, data)
 
         } else {
-          
+
             ## append the rest
             result <- full_join(result, data)
 
@@ -174,15 +174,15 @@ merge.ipeds <- function(datasets = NULL, pattern = NULL, byvar = 'unitid') {
 
     ## can either list datasets or use pattern (explicit list overrules)
     if (!is.null(pattern)) {
-        
+
         ds <- ls(envir = .GlobalEnv, pattern = pattern)
-        
+
     } else if (!is.null(datasets)) {
-        
+
         ds <- datasets
-        
+
     } else {
-        
+
         message('\n Need a list of datasets or a pattern \n')
         return
     }
@@ -193,7 +193,7 @@ merge.ipeds <- function(datasets = NULL, pattern = NULL, byvar = 'unitid') {
 
             message(paste0('\n Starting with ', ds[i], '\n'))
             final.data <- eval(parse(text = ds[i]))
-            
+
         } else {
 
             message(paste0('\n merging in ', ds[i], '\n'))
@@ -216,8 +216,8 @@ merge.ipeds <- function(datasets = NULL, pattern = NULL, byvar = 'unitid') {
 propmiss <- function(dataframe) {
 	m <- sapply(dataframe, function(x) {
 		data.frame(
-			nmiss=sum(is.na(x)), 
-			n=length(x), 
+			nmiss=sum(is.na(x)),
+			n=length(x),
 			propmiss=sum(is.na(x))/length(x)
 		)
 	})
