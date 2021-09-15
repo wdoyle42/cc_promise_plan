@@ -1,0 +1,24 @@
+---
+title: "Policy Options for the America College Promise Plan"
+author: "Will Doyle"
+date: "9/15/2021"
+output: html_document
+---
+```{r,,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, results ='hide',include=TRUE,message=FALSE)
+library(tidyverse)
+library(writexl)
+library(scales)
+library(scales)
+library(tidyverse)
+
+```
+
+The first and by far the most important thing to say is that this plan as written would dramatically increase the opportunity to go to college for millions of young people in the US. A quick back-of-the envelope calculate suggests and additional `r comma(1.23e6*(.025*1.2))` while in higher-priced New York, an additional `r comma(.6e6*(.025*5))` would be able to attend, an increase of  `r 2.5*5` percent. 
+
+The biggest concern about the program, as Wesley Whistle and others have pointed out, is whether or not states will participate. There's two parts to this, only one of which Congress can do much about. The first part is whethher states might refuse to participate when it is plainly in the states' interest to participate. We saw this for both the expansion of Medicaid under the ACA and more recently the extension of unemployment benefits. From the technical perspective I'm taking, there's not a lot to do about this, but it is a reality. 
+
+That said, Congress can get more states to participate by making it a better deal for states. My basic take is that the deal being offered states is that to get a per-student subsidy of about \$4,500 the states have to forego tuition benefits and provide \$900 in "matching" funds. Here's what that deal looks like for states in comparison with their current subsidy levels. The states that have a positive difference will be able to provide free college and not see a difference in their per-student subsidy level. 
+
+Based on this analysis, I think that the terms being offered aren't generous enough for many states to participate. I propose that the goal should be that 90 percent of students will live in a state where participation in the program is a net positive for the state. 
+
