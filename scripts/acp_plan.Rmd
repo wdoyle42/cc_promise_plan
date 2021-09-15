@@ -351,7 +351,7 @@ spend_sum<-cc_inst%>%
   arrange(-diff)%>%
   mutate(name=fct_reorder(name,diff))%>%
   ungroup()%>%
-  select(name,fed_spend,state_match_plus_tuition_fee_revs,diff)
+  select(name,tuition_revs,state_match,state_match_plus_tuition_fee_revs,fed_spend,diff)
   knitr::kable(spend_sum)
 ```
 

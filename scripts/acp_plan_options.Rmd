@@ -14,11 +14,201 @@ library(tidyverse)
 
 ```
 
-The first and by far the most important thing to say is that this plan as written would dramatically increase the opportunity to go to college for millions of young people in the US. A quick back-of-the envelope calculate suggests and additional `r comma(1.23e6*(.025*1.2))` while in higher-priced New York, an additional `r comma(.6e6*(.025*5))` would be able to attend, an increase of  `r 2.5*5` percent. 
 
-The biggest concern about the program, as Wesley Whistle and others have pointed out, is whether or not states will participate. There's two parts to this, only one of which Congress can do much about. The first part is whethher states might refuse to participate when it is plainly in the states' interest to participate. We saw this for both the expansion of Medicaid under the ACA and more recently the extension of unemployment benefits. From the technical perspective I'm taking, there's not a lot to do about this, but it is a reality. 
 
-That said, Congress can get more states to participate by making it a better deal for states. My basic take is that the deal being offered states is that to get a per-student subsidy of about \$4,500 the states have to forego tuition benefits and provide \$900 in "matching" funds. Here's what that deal looks like for states in comparison with their current subsidy levels. The states that have a positive difference will be able to provide free college and not see a difference in their per-student subsidy level. 
+```{r}
+addir<-"../data/cleaned"
+outdir<-"../output"
+dir.create(outdir, showWarnings = FALSE)
+```
+Now that I (think that) I understand how the America's College Promise program would work, I'd like to share both what I think is great about the plan and the concerns I have. 
 
-Based on this analysis, I think that the terms being offered aren't generous enough for many states to participate. I propose that the goal should be that 90 percent of students will live in a state where participation in the program is a net positive for the state. 
+The first and by far the most important thing to say is that this plan as written would dramatically increase the opportunity to go to college for millions of young people in the US. A quick back-of-the envelope calculate suggests and additional `r comma(1.23e6*(.025*1.2))` students in California would go to college as a result of this plan.  while in higher-priced New York, an additional `r comma(.6e6*(.025*5))` would be able to attend, an increase of  `r 2.5*5` percent. 
 
+The biggest concern about the program, as Wesley Whistle and others have pointed out, is whether or not states will participate. There's two parts to this, only one of which Congress can do much about. The first part is whether states might refuse to participate when it is plainly in the states' interest to participate. We saw this for both the expansion of Medicaid under the ACA and more recently the extension of unemployment benefits. From the technical perspective I'm taking, there's not a lot to do about this, but it is a reality. 
+
+That said, Congress can get more states to participate by making it a better deal for states. My basic take is that the deal being offered states is that to get a per-student subsidy of about \$3,600 the states have to forego tuition benefits and provide \$900 in "matching" funds. Here's what that deal looks like for states in comparison with their current subsidy levels. The states that have a positive difference will be able to provide free college and not see any change in their per-student subsidy level. 
+```{r}
+inst<-read_csv(file.path(addir,"institutions.csv"))
+```
+
+
+```{r}
+cc_inst<-inst%>%
+  group_by(stabbr)%>%
+  mutate(state_fte=sum(fteug,na.rm=TRUE))%>%
+  ungroup()%>%
+  rowwise()%>%
+  mutate(most_degrees=max(Bachelors, ## Select the largest from this list
+                          Masters, 
+                          PhD,
+                          Associates))%>%
+  mutate(predom_assoc=ifelse(most_degrees==Associates,1,0))%>% ## If the larges is associates then the inst is predom associ
+  mutate(promise_elig=ifelse(predom_assoc==1|hloffer==3,1,0 ))%>% ## OR highest offer is associates
+  mutate(total_degree=rowSums(across(.cols=c("Bachelors","Masters","PhD","Associates")),na.rm=TRUE))%>%
+  mutate(prop_assoc=Associates/total_degree)%>%
+  filter(control==1)%>% ## public only
+  filter(promise_elig==1) ## eigible only
+```
+
+
+```{r}
+ak_avg<-inst%>%
+  filter(stabbr=="AK",control==1)%>%
+  summarize(ak_mean_tution=mean((tuition2+fee2),na.rm=TRUE))%>%
+  as_vector()
+
+cc_tuit_table<-cc_inst%>%
+  group_by(name)%>%
+  summarize(mean_tuition_fees=mean((tuition2+fee2),na.rm=TRUE))%>%
+  mutate(mean_tuition_fees=ifelse(name=="Alaska",ak_avg,mean_tuition_fees))%>%
+  arrange(-mean_tuition_fees)%>%
+    mutate(mean_tuition_fees=dollar(mean_tuition_fees))%>%
+  rename("Average State Tuition and Fees"=mean_tuition_fees)
+  knitr::kable(cc_tuit_table)
+
+median_tuition=cc_inst%>%
+  group_by(name)%>%
+  summarize(mean_tuition_fees=mean((tuition2+fee2),na.rm=TRUE))%>%
+  mutate(mean_tuition_fees=ifelse(name=="Alaska",ak_avg,mean_tuition_fees))%>%
+  summarize(median_tuition_fees=median(mean_tuition_fees))%>%
+  as_vector()
+
+
+fed_subsidy=.8*median_tuition
+
+state_match=.2*median_tuition
+
+```
+
+
+```{r}
+cc_inst<-cc_inst%>%
+  mutate(fed_spend=(median_tuition*.8)*fteug)%>%
+    mutate(state_match=(median_tuition*.2)*fteug)
+```
+
+
+```{r,results='asis'}
+spend_sum<-cc_inst%>%
+  group_by(name)%>%
+  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  rename(tuition_fee_revs=tuition_revs)%>%
+  mutate(state_match_plus_tuition_fee_revs=tuition_fee_revs+state_match)%>%
+  mutate(diff=fed_spend-state_match_plus_tuition_fee_revs)%>%
+  arrange(-diff)%>%
+  mutate(name=fct_reorder(name,diff))%>%
+  ungroup()%>%
+ select(name,tuition_fee_revs,state_match,state_match_plus_tuition_fee_revs,fed_spend,diff)
+  knitr::kable(spend_sum)
+```
+
+As an example, in Louisiana the state currently collects about \$2,900 per student in tuition revenues.  The state would forego those revenues and provide a \$900 (or so) match. That combined \$3,800 is more than the \$3,700 or so they would get from the feds, so per-student subsidies would have to go down, or the state would have to spend about $100 more per cc student.  It looks like there are about
+`r length(spend_sum$diff[spend_sum$diff<=0])` 
+states that would have to
+increase funding for community college students in order to participate.
+Of these,
+`r  length(spend_sum$diff[spend_sum$diff<0&spend_sum$diff>=-500])` would
+have to increase funding by
+\$500 or so, 
+`r length(spend_sum$diff[spend_sum$diff<(-500)&spend_sum$diff>=-1000])` 
+would have to increase funding by \$500-1000,
+`r length(spend_sum$diff[spend_sum$diff<(-1000)&spend_sum$diff>=-2000])` 
+would have to increase funding by \$1000-2000 and 
+`r length(spend_sum$diff[spend_sum$diff<=-2000])`
+would have to increase funding by more than \$2000 if they wanted
+per-student subsidy levels at community colleges to remain the same.
+
+
+
+Based on this analysis, I think that the terms being offered aren't generous enough for many states to participate. I propose that the goal should be that 90 percent of students will live in a state where participation in the program is a net positive for the state. That's about 4 million of the 4.5 million fte in the program. 
+
+
+```{r,results='asis'}
+spend_sum<-cc_inst%>%
+  group_by(name)%>%
+  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  rename(tuition_fee_revs=tuition_revs)%>%
+  mutate(state_match_plus_tuition_fee_revs=tuition_fee_revs+state_match)%>%
+  mutate(diff=fed_spend-state_match_plus_tuition_fee_revs)%>%
+  arrange(-diff)%>%
+  mutate(name=fct_reorder(name,diff))%>%
+  ungroup()%>%
+ select(name,state_match_plus_tuition_fee_revs,fed_spend,diff,fteug)%>%
+mutate(cumulative_fte=comma(cumsum(fteug))) 
+  knitr::kable(spend_sum)
+```
+
+Based on the above, the program should incorporate about another \$1,200 per student, moving the "break even" state from Illinois to New Jersey. 
+
+The first step would be to drop the state match. It's not clear to me what the state match in this program is supposed to do beyond reducing costs for the feds. Usually a state match is in place for one of two reasons. The first reason is to encourage states to do something they wouldn't otherwise do, and to reward more good behavior from the states that are doing what the feds want them to do. This match doesn't work that way. It's basically just an ante from the states. The other reason to have a match is to ensure that the feds aren't the sole funder of a program--that the state is invested somehow.
+The states are already the funders of community colleges, and this match won't serve to somehow get them invested. I'm also concerned that this might become a ceiling, not a floor for the foregone tuition revenues, even with the maintenance of effort and stabilizers. 
+
+If the state match is dropped, 3.8 million fte would be in states where the program would plainly be win-win. Tuition at community colleges would be free and the states wouldn't have to reduce per-student subsidies below current levels. 
+
+
+```{r,results='asis'}
+spend_sum<-cc_inst%>%
+  group_by(name)%>%
+  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  mutate(fed_spend=median_tuition)%>%
+  mutate(tuition_fee_revs=tuition_revs)%>%
+  mutate(diff=fed_spend-tuition_fee_revs)%>%
+  arrange(-diff)%>%
+  mutate(name=fct_reorder(name,diff))%>%
+  ungroup()%>%
+ select(name,tuition_fee_revs,fed_spend,diff,fteug)%>%
+mutate(cumulative_fte=comma(cumsum(fteug))) 
+  knitr::kable(spend_sum)
+```
+
+```{r, results='asis'}
+spend_sum<-cc_inst%>%
+  group_by(name)%>%
+  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  mutate(fed_spend=median_tuition)%>%
+  mutate(tuition_fee_revs=tuition_revs)%>%
+  mutate(diff=fed_spend-tuition_fee_revs)%>%
+  arrange(-diff)%>%
+  mutate(name=fct_reorder(name,diff))%>%
+  ungroup()%>%
+ select(name,tuition_fee_revs,fed_spend,diff,fteug)%>%
+mutate(cumulative_fte=comma(cumsum(fteug))) %>%
+  filter(diff<0)
+  knitr::kable(spend_sum)
+```
+
+
+In this case, Louisiana would again give up  $2900 per student in tuition and fee revenues, but would get \$4,600 from the feds, making it a plainly good deal for the state: free community college AND increased per-student revenues. 
+
+Colorado has the Colorado Opportunity Fund which recycles tuition back to the institutions in a really complicated way, and I don't really trust the estimates, so I'm going to ignore Colorado. That leaves four small states: Delaware, South Dakota, New Hampshire and Vermont that would have to increase subsides for this program to not be a net loss for their institutions. These states should do that! For every other state, and for 95 percent of students around the country, the plan would be a net positive.
+
+
+What if the federal portion was just a nice even \$5,000?
+
+
+```{r,results='asis'}
+spend_sum<-cc_inst%>%
+  group_by(name)%>%
+  summarize(across(.cols=c("fteug","tuition_revs","state_approps","local_approps","fed_spend","state_match"),.fns=sum,na.rm=TRUE ))%>%
+  mutate(across(c("tuition_revs","state_approps","local_approps","fed_spend","state_match"), .fns= ~.x/fteug  ))%>%
+  mutate(state_match_plus_tuition_fee_revs=tuition_revs)%>%
+  mutate(fed_spend=5000)%>%
+  mutate(diff=fed_spend-state_match_plus_tuition_fee_revs)%>%
+  arrange(-diff)%>%
+  mutate(name=fct_reorder(name,diff))%>%
+  ungroup()%>%
+ select(name,state_match_plus_tuition_fee_revs,fed_spend,diff,fteug)%>%
+mutate(cumulative_fte=comma(cumsum(fteug))) 
+  knitr::kable(spend_sum)
+```
+
+Again, the program would be a net positive for all but four small, underfunded states. 
+
+So, that's my suggestion: drop the 20 percent match, increase the per student funding to \$5,000 (I can come up with a super sophisticated statistical rationale if you want, machine learning available at no extra charge). 90 percent of students would live in states where community college is free and the state would not be forced to make cuts in community college subsidy levels. 
+
+Thoughts and criticisms welcome as always. 
